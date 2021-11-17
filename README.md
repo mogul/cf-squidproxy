@@ -1,21 +1,70 @@
-# 18F Open Source Policy
+# cf-squidproxy
 
-This repository contains the official [Open Source Policy](policy.md) of [18F](https://18f.gsa.gov/) (a digital delivery team within the [General Services Administration](http://gsa.gov)).
+## Why this project
 
-**[Read 18F's open source policy.](policy.md)**
+To meet the requirements of NIST control SC-7, outbound traffic from cloud.gov-hosted applications should be restricted by default, and allowed only by explicit exception.
 
-### 18F Team Guidance
+By deploying a proxy in a `public-egress` space, and the client applications in a `restricted-egress` space, you can implement SC-7 on cloud.gov.
 
-For 18F team members, we have guidance on how 18F puts this policy into practice, and how we handle the narrow situations where we may delay or withhold the release of source code.
+This repository deploys Squid as the proxy application on an internal route. The proxy can be used by other applications using the normal `http_proxy` and `https_proxy` methods.
 
-**[Read 18F's open source team practices.](practice.md)**
+## Instructions
 
-### Credits
+### Deploy the proxy on Cloud Foundry
 
-This policy was originally forked from the [Consumer Financial Protection Bureau's policy](https://github.com/cfpb/source-code-policy). Thanks also to [@benbalter](https://github.com/benbalter) for his [insights regarding CFPB's initial policy](http://ben.balter.com/2012/04/10/whats-missing-from-cfpbs-awesome-new-source-code-policy/).
+1. Customize the vars.yml-template to uniquely name your app and route:
 
+    ```bash
+    $ cp vars.yml-template vars.yml
+    $ $EDITOR vars.yml
+    ```
 
-### Public domain
+2. Push the app:
+
+    ```bash
+    $ cf push --vars-file vars.yml
+    ```
+
+### Test the proxy is operating correctly
+
+1. Watch the logs for the app in another window (or the cloud.gov dashboard):
+
+    ```bash
+    $ cf logs squid-proxy-ID
+    ```
+
+2. SSH into the application
+
+    ```bash
+    $ cf ssh squid-proxy-ID
+    $ /tmp/lifecycle/shell
+    ```
+
+5. Test that the proxy is filtering connections:
+
+    ```bash
+    $ export squid=squid-proxy-ID.apps.internal:8080
+    $ wget -e use_proxy=yes -e http_proxy=$squid -e https_proxy=$squid https://www.yahoo.com --no-check-certificate
+    # The request should be forbidden
+    $ wget -e use_proxy=yes -e http_proxy=$squid -e https_proxy=$squid https://wiki.squid-cache.org --no-check-certificate
+    # The request should succeed
+    ```
+
+## TODO
+
+- The allow-list content is hard-coded; it should be overridden if there's an env var or user-provided service with alternative content
+- The demo instructions should include using `cf add-network-policy` to permit client traffic from a client app
+- We should document the regexes that are permitted for the allow-list (just point to where Squid documents the regex flavor it uses)
+- Figure out auth... Right now any cloud.gov app can use the proxy just by adding a network policy; it should require client creds
+- Figure out if SSL for client connections is even possible; it doesn't look like the proxy standard supports using TLS for https_proxy connections, only http!
+  - I remember hearing that every CF app has a client-certificate; can we use that?
+  - If the platform starts encrypting c2c traffic (eg using IPsec) then it's a non-issue.
+
+## Contributing
+
+See [CONTRIBUTING](CONTRIBUTING.md) for additional information.
+
+## Public domain
 
 This project is in the worldwide [public domain](LICENSE.md). As stated in [CONTRIBUTING](CONTRIBUTING.md):
 

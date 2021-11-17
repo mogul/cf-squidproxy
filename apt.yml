@@ -1,0 +1,5 @@
+---
+packages:
+- squid3
+- squidclient
+# - ca-certificates

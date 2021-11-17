@@ -1,2 +1,4 @@
 .DS_Store
 /todo.txt
+vars.yml
+squid.conf-default

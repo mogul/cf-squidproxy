@@ -1,0 +1,11 @@
+---
+# To apply this manifest: cf push --vars-file vars.yml
+applications:
+  - name: squid-proxy-((ID))
+    instances: 1
+    buildpacks:
+      - https://github.com/cloudfoundry/apt-buildpack
+      - https://github.com/cloudfoundry/binary-buildpack
+    routes:
+      - route: squid-proxy-((ID)).apps.internal
+    command: ${SQUID} -N -f squid.conf
